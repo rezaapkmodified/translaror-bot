@@ -1,5 +1,5 @@
 """
-Glass Translator Bot - نسخه کامل با مدیریت استیکر برای Railway
+Glass Translator Bot - نسخه نهایی برای Railway
 """
 
 import os
@@ -20,7 +20,7 @@ if not BOT_TOKEN:
 API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 # ============================================
-# لیست ادمین‌ها
+# لیست ادمین‌ها (آیدی عددی)
 # ============================================
 ADMINS = [7699447054]  # آیدی خود را وارد کنید
 
@@ -82,7 +82,6 @@ def detect_language(text):
 # TELEGRAM API FUNCTIONS
 # ============================================
 def send_sticker(chat_id, sticker_id):
-    """ارسال استیکر به کاربر"""
     url = f"{API_URL}/sendSticker"
     payload = {"chat_id": chat_id, "sticker": sticker_id}
     try:
@@ -373,7 +372,6 @@ def is_admin(user_id):
     return user_id in ADMINS
 
 def handle_start(chat_id, first_name):
-    # مقداردهی اولیه
     if chat_id not in user_preferences:
         user_preferences[chat_id] = {"src": "fa", "dest": "en"}
     if chat_id not in user_stats:
@@ -397,7 +395,6 @@ def handle_start(chat_id, first_name):
             f"🌟 <b>سلام ادمین {first_name}!</b>\n\n"
             f"👑 شما دسترسی مدیریت دارید.\n"
             f"🎨 تم: {theme['emoji']} {theme['name']}\n"
-            f"📱 استیکر: {WELCOME_STICKER[:20]}...\n"
             f"🌍 {len(LANGUAGES)} زبان\n\n"
             f"💡 برای مدیریت استیکر از پنل ادمین استفاده کنید."
         )
@@ -417,9 +414,6 @@ def handle_start(chat_id, first_name):
         )
         send_message(chat_id, welcome, create_main_menu(chat_id))
 
-# ============================================
-# مدیریت استیکر
-# ============================================
 def handle_sticker_admin(chat_id, action):
     global WELCOME_STICKER
     
@@ -536,9 +530,6 @@ def handle_audio_help(chat_id):
     )
     send_message(chat_id, help_text, create_main_menu(chat_id))
 
-# ============================================
-# ADMIN FUNCTIONS
-# ============================================
 def admin_stats():
     total_users = len(user_stats)
     total_translations = sum(user_stats.values())
@@ -551,8 +542,7 @@ def admin_stats():
         f"🟢 فعال: {active_users}\n"
         f"📝 ترجمه‌ها: {total_translations}\n"
         f"🚫 مسدود: {blocked}\n"
-        f"🌍 زبان‌ها: {len(LANGUAGES)}\n"
-        f"📱 استیکر: {WELCOME_STICKER[:20]}..."
+        f"🌍 زبان‌ها: {len(LANGUAGES)}"
     )
     return stats_text
 
@@ -569,13 +559,11 @@ def main():
     print("╚════════════════════════════════════════╝")
     print()
     
-    # تست اتصال
     try:
         test_response = requests.get(f"{API_URL}/getMe", timeout=10)
         test_data = test_response.json()
         if test_data.get("ok"):
             print(f"✅ ربات متصل شد! @{test_data['result']['username']}")
-            print(f"📱 استیکر فعلی: {WELCOME_STICKER[:20]}...")
             print(f"🌍 تعداد زبان‌ها: {len(LANGUAGES)}")
         else:
             print("❌ توکن نامعتبر!")
@@ -635,115 +623,13 @@ def main():
                         print(f"🔘 کلیک دکمه: {data}")
                         answer_callback(callback["id"])
                         
-                        # ========================
-                        # CALLBACK HANDLERS
-                        # ========================
-                        
-                        # Admin Panel
+                        # Callback handlers
                         if data == "admin_panel" and is_admin(chat_id):
                             send_message(chat_id, "👑 پنل مدیریت", create_admin_panel())
-                        
-                        elif data == "user_menu":
-                            send_message(chat_id, "🔙 منوی کاربری", create_main_menu(chat_id))
-                        
-                        # Sticker Admin
-                        elif data == "admin_sticker" and is_admin(chat_id):
-                            send_message(
-                                chat_id,
-                                "📱 <b>مدیریت استیکر خوش‌آمدگویی</b>\n\n"
-                                f"استیکر فعلی: <code>{WELCOME_STICKER}</code>",
-                                create_sticker_admin_panel()
-                            )
-                        
-                        elif data == "admin_sticker_current" and is_admin(chat_id):
-                            handle_sticker_admin(chat_id, "current")
-                        
-                        elif data == "admin_sticker_change" and is_admin(chat_id):
-                            handle_sticker_admin(chat_id, "change")
-                        
-                        elif data == "admin_sticker_list" and is_admin(chat_id):
-                            handle_sticker_admin(chat_id, "list")
-                        
-                        elif data == "admin_sticker_reset" and is_admin(chat_id):
-                            handle_sticker_admin(chat_id, "reset")
-                        
-                        # Themes
-                        elif data == "show_themes":
-                            current_theme = user_themes.get(chat_id, 'default')
-                            theme_name = THEMES.get(current_theme, THEMES['default'])['name']
-                            theme_emoji = THEMES.get(current_theme, THEMES['default'])['emoji']
-                            send_message(
-                                chat_id,
-                                f"🎨 <b>انتخاب تم</b>\n\nتم فعلی: {theme_emoji} {theme_name}",
-                                create_theme_keyboard()
-                            )
-                        
-                        elif data.startswith("theme_"):
-                            theme_key = data.replace("theme_", "")
-                            handle_theme_change(chat_id, theme_key)
-                        
-                        elif data == "audio_help":
-                            handle_audio_help(chat_id)
-                        
-                        # Language selection
-                        elif data == "show_src":
-                            send_message(chat_id, "🌍 انتخاب مبدأ:", create_language_keyboard("src"))
-                        
-                        elif data == "show_dest":
-                            send_message(chat_id, "🌍 انتخاب مقصد:", create_language_keyboard("dest"))
-                        
-                        elif data.startswith("lang_"):
-                            parts = data.split("_")
-                            lang_code = parts[1]
-                            lang_type = parts[2]
-                            
-                            if chat_id not in user_preferences:
-                                user_preferences[chat_id] = {"src": "fa", "dest": "en"}
-                            
-                            user_preferences[chat_id][lang_type] = lang_code
-                            send_message(
-                                chat_id,
-                                f"✅ {lang_type} به {get_lang_name(lang_code)} تغییر یافت",
-                                create_main_menu(chat_id)
-                            )
-                        
-                        elif data == "swap":
-                            prefs = user_preferences.get(chat_id, {"src": "fa", "dest": "en"})
-                            src, dest = prefs["src"], prefs["dest"]
-                            user_preferences[chat_id]["src"] = dest
-                            user_preferences[chat_id]["dest"] = src
-                            send_message(chat_id, "🔄 تعویض شد!", create_main_menu(chat_id))
-                        
-                        elif data == "auto":
-                            if chat_id not in user_preferences:
-                                user_preferences[chat_id] = {"src": "fa", "dest": "en"}
-                            user_preferences[chat_id]["src"] = "auto"
-                            send_message(chat_id, "🤖 خودکار فعال شد", create_main_menu(chat_id))
-                        
-                        elif data == "help":
-                            handle_help(chat_id)
-                        
-                        elif data == "creator":
-                            theme_name = user_themes.get(chat_id, 'default')
-                            theme = THEMES.get(theme_name, THEMES['default'])
-                            send_message(
-                                chat_id,
-                                f"👤 <b>سازنده</b>\n\n"
-                                f"ساخته شده توسط @Mrnobody_ir\n\n"
-                                f"🎨 تم: {theme['emoji']} {theme['name']}",
-                                create_main_menu(chat_id)
-                            )
-                        
-                        elif data == "back_to_menu":
-                            send_message(chat_id, "🔙 منوی اصلی", create_main_menu(chat_id))
-                        
-                        # Admin callbacks
                         elif data == "admin_stats" and is_admin(chat_id):
                             send_message(chat_id, admin_stats(), create_admin_panel())
-                        
                         elif data == "admin_users" and is_admin(chat_id):
                             send_message(chat_id, "👥 لیست کاربران (به زودی)", create_admin_panel())
-                        
                         elif data == "admin_blocked" and is_admin(chat_id):
                             if blocked_users:
                                 blocked_text = "🚫 <b>کاربران مسدود</b>\n\n"
@@ -755,6 +641,69 @@ def main():
                                 send_message(chat_id, blocked_text, create_admin_panel())
                             else:
                                 send_message(chat_id, "✅ هیچ کاربر مسدودی وجود ندارد.", create_admin_panel())
+                        elif data == "admin_sticker" and is_admin(chat_id):
+                            send_message(chat_id, "📱 مدیریت استیکر", create_sticker_admin_panel())
+                        elif data == "admin_sticker_current" and is_admin(chat_id):
+                            handle_sticker_admin(chat_id, "current")
+                        elif data == "admin_sticker_change" and is_admin(chat_id):
+                            handle_sticker_admin(chat_id, "change")
+                        elif data == "admin_sticker_list" and is_admin(chat_id):
+                            handle_sticker_admin(chat_id, "list")
+                        elif data == "admin_sticker_reset" and is_admin(chat_id):
+                            handle_sticker_admin(chat_id, "reset")
+                        elif data == "user_menu":
+                            send_message(chat_id, "🔙 منوی کاربری", create_main_menu(chat_id))
+                        elif data == "show_themes":
+                            current_theme = user_themes.get(chat_id, 'default')
+                            theme_name = THEMES.get(current_theme, THEMES['default'])['name']
+                            theme_emoji = THEMES.get(current_theme, THEMES['default'])['emoji']
+                            send_message(
+                                chat_id,
+                                f"🎨 <b>انتخاب تم</b>\n\nتم فعلی: {theme_emoji} {theme_name}",
+                                create_theme_keyboard()
+                            )
+                        elif data.startswith("theme_"):
+                            theme_key = data.replace("theme_", "")
+                            handle_theme_change(chat_id, theme_key)
+                        elif data == "show_src":
+                            send_message(chat_id, "🌍 انتخاب مبدأ:", create_language_keyboard("src"))
+                        elif data == "show_dest":
+                            send_message(chat_id, "🌍 انتخاب مقصد:", create_language_keyboard("dest"))
+                        elif data.startswith("lang_"):
+                            parts = data.split("_")
+                            lang_code = parts[1]
+                            lang_type = parts[2]
+                            if chat_id not in user_preferences:
+                                user_preferences[chat_id] = {"src": "fa", "dest": "en"}
+                            user_preferences[chat_id][lang_type] = lang_code
+                            send_message(chat_id, f"✅ {lang_type} به {get_lang_name(lang_code)} تغییر یافت", create_main_menu(chat_id))
+                        elif data == "swap":
+                            prefs = user_preferences.get(chat_id, {"src": "fa", "dest": "en"})
+                            src, dest = prefs["src"], prefs["dest"]
+                            user_preferences[chat_id]["src"] = dest
+                            user_preferences[chat_id]["dest"] = src
+                            send_message(chat_id, "🔄 تعویض شد!", create_main_menu(chat_id))
+                        elif data == "auto":
+                            if chat_id not in user_preferences:
+                                user_preferences[chat_id] = {"src": "fa", "dest": "en"}
+                            user_preferences[chat_id]["src"] = "auto"
+                            send_message(chat_id, "🤖 خودکار فعال شد", create_main_menu(chat_id))
+                        elif data == "help":
+                            handle_help(chat_id)
+                        elif data == "audio_help":
+                            handle_audio_help(chat_id)
+                        elif data == "creator":
+                            theme_name = user_themes.get(chat_id, 'default')
+                            theme = THEMES.get(theme_name, THEMES['default'])
+                            send_message(
+                                chat_id,
+                                f"👤 <b>سازنده</b>\n\n"
+                                f"ساخته شده توسط @Mrnobody_ir\n\n"
+                                f"🎨 تم: {theme['emoji']} {theme['name']}",
+                                create_main_menu(chat_id)
+                            )
+                        elif data == "back_to_menu":
+                            send_message(chat_id, "🔙 منوی اصلی", create_main_menu(chat_id))
             
             time.sleep(0.5)
             
